@@ -1,3 +1,4 @@
+
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
@@ -5,8 +6,7 @@ import numpy as np
 import openai
 
 # Set your OpenAI API key
-openai.api_key = "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
-"
+import os\nopenai.api_key = os.getenv("API_Key_CG")
 
 st.title("AI-Augmented Investment Guidance for New Graduates")
 st.markdown("""
