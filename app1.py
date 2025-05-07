@@ -30,6 +30,16 @@ with st.form("user_form"):
 
     submitted = st.form_submit_button("Get My Investment Guidance")
 
+# --- Free Response Section ---
+st.markdown("## Personal Financial Situation (Optional)")
+user_story = st.text_area(
+    "Briefly describe your current financial situation or any plans you'd like considered.",
+    placeholder="Example: I just graduated, working part-time, expecting to go full-time soon..."
+)
+if user_story:
+    st.write("Thanks for sharing! Here's what you entered:")
+    st.info(user_story)
+
 # --- Load Data and Match Recommendations ---
 @st.cache_data
 def load_data():
