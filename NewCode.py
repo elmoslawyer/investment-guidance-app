@@ -7,6 +7,7 @@ import openai
 
 # Set your OpenAI API key
 import os\nopenai.api_key = os.getenv("API_Key_CG")
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 st.title("AI-Augmented Investment Guidance for New Graduates")
 st.markdown("""
