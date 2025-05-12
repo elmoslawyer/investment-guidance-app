@@ -28,7 +28,7 @@ st.markdown("""
 This tool helps new graduates receive personalized investment guidance based on your current financial profile.
 """)
 
-# --- Microphone Input (Browser) with Text Area Injection ---
+# --- Microphone Input (Browser) with Status Indicator ---
 st.subheader("🎤 Speak your financial situation")
 
 components.html("""
@@ -48,22 +48,41 @@ components.html("""
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
 
+        recognition.onresult = function(event) {
+            var transcript = event.results[0][0].transcript;
+            sendTextToStreamlit(transcript);
+        };
+
+        recognition.onerror = function(event) {
+            console.error("Speech recognition error", event.error);
+            document.getElementById('mic-status').innerText = "🎙️ Error occurred";
+        };
+
+        recognition.onstart = function() {
+            document.getElementById('mic-status').innerText = "🎙️ Listening...";
+            document.getElementById('mic-status').style.color = "red";
+        };
+
+        recognition.onend = function() {
+            document.getElementById('mic-status').innerText = "🎙️ Mic off";
+            document.getElementById('mic-status').style.color = "gray";
+        };
+
         function startListening() {
             recognition.start();
         }
 
-        recognition.onresult = function(event) {
-            var transcript = event.results[0][0].transcript;
-            sendTextToStreamlit(transcript);
-        }
-
-        recognition.onerror = function(event) {
-            console.error("Speech recognition error", event.error);
+        function stopListening() {
+            recognition.stop();
         }
     </script>
 
-    <button onclick="startListening()">🎙️ Start Talking</button>
-""", height=150)
+    <div style="margin-bottom: 10px;">
+        <button onclick="startListening()">🎙️ Start Talking</button>
+        <button onclick="stopListening()" style="margin-left: 10px;">🛑 Stop Talking</button>
+        <div id="mic-status" style="margin-top: 8px; font-weight: bold; color: gray;">🎙️ Mic off</div>
+    </div>
+""", height=200)
 
 # --- Form Inputs ---
 with st.form("user_form"):
