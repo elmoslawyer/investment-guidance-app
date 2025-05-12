@@ -28,7 +28,7 @@ st.markdown("""
 This tool helps new graduates receive personalized investment guidance based on your current financial profile.
 """)
 
-# --- Microphone Input (Browser) with Status Indicator ---
+# --- Microphone Input with Continuous Listening and Status ---
 st.subheader("🎤 Speak your financial situation")
 
 components.html("""
@@ -46,10 +46,11 @@ components.html("""
         var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'en-US';
         recognition.interimResults = false;
+        recognition.continuous = true;  // ✅ Stay on after each result
         recognition.maxAlternatives = 1;
 
         recognition.onresult = function(event) {
-            var transcript = event.results[0][0].transcript;
+            var transcript = event.results[event.results.length - 1][0].transcript;
             sendTextToStreamlit(transcript);
         };
 
