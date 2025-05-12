@@ -40,7 +40,8 @@ components.html("""
         }
     }
     var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US'; recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
     recognition.onresult = function(event) {
@@ -157,7 +158,6 @@ Please give a short, friendly recommendation summarizing which strategy you woul
         st.error("OpenAI Error")
         st.exception(e)
 
-    # Simulate and store
     values, net_worths, bear_years = simulate_growth(savings, return_rate, bear_loss, income, years)
     year_range = list(range(0, years + 1))
     st.session_state.financial_graph_data.append({
