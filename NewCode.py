@@ -1,17 +1,80 @@
-
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 import openai
+import streamlit.components.v1 as components
 
-# Set your OpenAI API key
-openai.api_key = "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"
+# --- OpenAI API Key for School Project ---
+openai.api_key = "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"
 
+# --- Optional Key Test ---
+st.markdown("### 🔐 Test My OpenAI Key")
+if st.button("Run Test"):
+    try:
+        test_response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "Say hello in one sentence."}]
+        )
+        st.success("✅ API key is working!")
+        st.info(f"GPT says: {test_response['choices'][0]['message']['content']}")
+    except Exception as e:
+        st.error("❌ There was a problem using your API key.")
+        st.exception(e)
+
+# --- Page Title ---
 st.title("AI-Augmented Investment Guidance for New Graduates")
 st.markdown("""
 This tool helps new graduates receive personalized investment guidance based on your current financial profile.
 """)
+
+# --- Microphone Input (Browser-Based) ---
+st.subheader("🎤 Speak your financial situation")
+components.html("""
+    <script>
+        const streamlitDoc = window.parent.document;
+
+        function sendTextToStreamlit(text) {
+            const streamlitInput = streamlitDoc.querySelector('input[data-testid="stTextInput"]');
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nativeInputValueSetter.call(streamlitInput, text);
+            streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        function startListening() {
+            recognition.start();
+        }
+
+        recognition.onresult = function(event) {
+            var transcript = event.results[0][0].transcript;
+            sendTextToStreamlit(transcript);
+        }
+
+        recognition.onerror = function(event) {
+            console.error("Speech recognition error", event.error);
+        }
+    </script>
+
+    <button onclick="startListening()">🎙️ Start Talking</button>
+""", height=150)
+
+user_speech_input = st.text_input("Hidden Speech Input", key="speech_input", label_visibility="collapsed")
+if user_speech_input:
+    st.success(f"You said: {user_speech_input}")
+
+# --- Text-to-Speech Response ---
+def speak_browser(text):
+    components.html(f"""
+    <script>
+    var msg = new SpeechSynthesisUtterance("{text}");
+    window.speechSynthesis.speak(msg);
+    </script>
+    """, height=0)
 
 # --- User Inputs ---
 with st.form("user_form"):
@@ -35,15 +98,12 @@ with st.form("user_form"):
 
     submitted = st.form_submit_button("Get My Investment Guidance")
 
-# --- Free Response Section ---
+# --- Free Text or Spoken Input ---
 st.markdown("## Personal Financial Situation (Optional)")
 user_story = st.text_area(
     "Briefly describe your current financial situation or any plans you'd like considered.",
     placeholder="Example: I just graduated, working part-time, expecting to go full-time soon..."
 )
-if user_story:
-    st.write("Thanks for sharing! Here's what you entered:")
-    st.info(user_story)
 
 # --- Load Data and Match Recommendations ---
 @st.cache_data
@@ -81,9 +141,10 @@ if submitted:
             st.markdown(f"**Description:** {row['Description']}")
             st.markdown("---")
 
-        # --- GPT-Based Summary ---
+        # --- GPT Summary ---
         strategies_summary = top_matches[['Strategy_Name', 'Goals', 'Risk_Tolerance', 'Horizon', 'Description']].to_string(index=False)
         user_profile = f"Goals: {', '.join(goals)} | Horizon: {horizon} | Risk Tolerance: {risk} | Knowledge: {knowledge}"
+        context = user_story if user_story else user_speech_input or "No additional context provided."
 
         gpt_prompt = f"""
 You are an investment assistant AI.
@@ -92,9 +153,7 @@ The user's profile is as follows:
 {user_profile}
 
 They also shared this about their situation:
-"""
-{user_story if user_story else "No additional context provided."}
-"""
+{context}
 
 Here are the top 3 matching investment strategies:
 {strategies_summary}
@@ -113,6 +172,7 @@ Please give a short, friendly recommendation summarizing which strategy you woul
             summary = response['choices'][0]['message']['content']
             st.subheader("AI-Powered Recommendation Summary")
             st.markdown(f"> {summary}")
+            speak_browser(summary)
         except Exception as e:
             st.error("There was an error retrieving the AI recommendation.")
             st.exception(e)
