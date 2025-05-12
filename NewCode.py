@@ -5,10 +5,8 @@ import matplotlib.pyplot as plt
 from openai import OpenAI
 import streamlit.components.v1 as components
 
-# --- OpenAI Client ---
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
-# --- Session State ---
 if "round" not in st.session_state:
     st.session_state.round = 1
 if "recommendation_history" not in st.session_state:
@@ -22,15 +20,14 @@ def reset_session():
     st.session_state.financial_graph_data = []
     st.session_state.user_story_text = ""
 
-# --- App Title ---
 st.title("📈 AI-Powered Investment Guidance (3 Scenarios Max)")
 
-# --- Mic Input ---
+# 🎙️ Microphone Input
 components.html("""
 <script>
     const streamlitDoc = window.parent.document;
     function appendTextToStreamlit(text) {
-        const inputBox = streamlitDoc.querySelector('textarea[placeholder^="Example: I just graduated"]');
+        const inputBox = streamlitDoc.querySelector('textarea[placeholder^='Example: I just graduated']');
         if (inputBox) {
             const currentText = inputBox.value;
             const newText = currentText.trim() + (currentText ? " " : "") + text;
@@ -39,8 +36,7 @@ components.html("""
         }
     }
     var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US'; recognition.interimResults = false;
-    recognition.continuous = true;
+    recognition.lang = 'en-US'; recognition.interimResults = false; recognition.continuous = true;
     recognition.maxAlternatives = 1;
     recognition.onresult = function(event) {
         var transcript = event.results[event.results.length - 1][0].transcript;
@@ -67,14 +63,12 @@ components.html("""
 </div>
 """, height=200)
 
-# --- Load Data ---
 @st.cache_data
 def load_data():
     return pd.read_csv("673_Final_Dataset.csv")
 
 data = load_data()
 
-# --- Form ---
 st.header(f"Scenario {st.session_state.round} of 3")
 with st.form("user_form"):
     goals = st.multiselect("Financial Goals:", ["Homeownership", "Early Retirement", "Education Fund", "Travel", "Wealth Growth"])
@@ -97,8 +91,6 @@ with st.form("user_form"):
 
     user_story = st.text_area("Optional: More about your situation", placeholder="Example: I just graduated...", value=st.session_state.user_story_text, key="user_story_text")
     submitted = st.form_submit_button("Run Scenario")
-
-# --- Growth Simulation ---
 def simulate_growth(starting, annual_return, bear_loss, income, duration):
     values = [starting]
     net_worths = [starting]
@@ -114,7 +106,6 @@ def simulate_growth(starting, annual_return, bear_loss, income, duration):
         net_worths.append(round(updated + (income * 12 * (duration - year)), 2))
     return values, net_worths, bear_years
 
-# --- GPT + Scenario Submission ---
 if submitted and st.session_state.round <= 3:
     def score_row(row):
         score = 0
@@ -184,29 +175,36 @@ Please provide a complete recommendation that:
     st.subheader(f"🤖 Recommendation for Scenario {st.session_state.round}")
     st.markdown(summary)
 
-    st.subheader("📊 Portfolio and Net Worth Over Time")
-    fig, ax = plt.subplots()
-    ax.plot(year_range, values, label="Portfolio Value", marker='o')
-    ax.plot(year_range, net_worths, label="Net Worth", linestyle='--')
+    # Separate Graphs
+    st.subheader("📉 Portfolio Value Over Time")
+    fig1, ax1 = plt.subplots()
+    ax1.plot(year_range, values, label="Portfolio Value", color='blue', marker='o')
     for y in bear_years:
         if y < len(values):
-            ax.plot(y, values[y], 'ro')
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Value ($)")
-    ax.set_title("Simulation with Bear Markets Every 6 Years")
-    ax.legend()
-    st.pyplot(fig)
+            ax1.plot(y, values[y], 'ro')
+    ax1.set_xlabel("Year")
+    ax1.set_ylabel("Portfolio Value ($)")
+    ax1.set_title("Portfolio Growth with Bear Markets Every 6 Years")
+    ax1.legend()
+    st.pyplot(fig1)
+
+    st.subheader("💼 Net Worth Over Time")
+    fig2, ax2 = plt.subplots()
+    ax2.plot(year_range, net_worths, label="Net Worth", color='orange', linestyle='--')
+    ax2.set_xlabel("Year")
+    ax2.set_ylabel("Net Worth ($)")
+    ax2.set_title("Net Worth Accumulation Over Time")
+    ax2.legend()
+    st.pyplot(fig2)
 
     st.session_state.round += 1
 
-# --- History ---
 if st.session_state.recommendation_history:
     st.subheader("🧠 Previous Recommendations")
     for i, rec in enumerate(st.session_state.recommendation_history, 1):
         st.markdown(f"### Scenario {i}")
         st.markdown(rec)
 
-# --- Combine Graphs ---
 if st.session_state.round > 2 and len(st.session_state.financial_graph_data) > 1:
     if st.button("📈 Combine Graphs"):
         st.subheader("📉 Combined Portfolio Growth")
@@ -229,7 +227,6 @@ if st.session_state.round > 2 and len(st.session_state.financial_graph_data) > 1
         ax2.legend()
         st.pyplot(fig2)
 
-# --- Controls ---
 col1, col2 = st.columns(2)
 with col1:
     if st.session_state.round <= 3:
