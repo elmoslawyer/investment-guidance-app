@@ -22,11 +22,11 @@ def reset_session():
     st.session_state.financial_graph_data = []
     st.session_state.user_story_text = ""
 
-# --- App UI ---
+# --- App Title ---
 st.title("📈 AI-Powered Investment Guidance (3 Scenarios Max)")
-st.caption("Get GPT advice + simulate financial outcomes for 3 customized profiles.")
+st.caption("Simulate growth, net worth, and portfolio value across 3 customizable scenarios.")
 
-# --- Microphone Integration ---
+# --- Microphone JS ---
 components.html("""
 <script>
     const streamlitDoc = window.parent.document;
@@ -68,14 +68,14 @@ components.html("""
 </div>
 """, height=200)
 
-# --- Load Data ---
+# --- Load Dataset ---
 @st.cache_data
 def load_data():
     return pd.read_csv("673_Final_Dataset.csv")
 
 data = load_data()
 
-# --- Form Inputs ---
+# --- Form ---
 st.header(f"Scenario {st.session_state.round} of 3")
 with st.form("user_form"):
     goals = st.multiselect("Financial Goals:", ["Homeownership", "Early Retirement", "Education Fund", "Travel", "Wealth Growth"])
@@ -99,16 +99,23 @@ with st.form("user_form"):
     user_story = st.text_area("Optional: More about your situation", placeholder="Example: I just graduated...", value=st.session_state.user_story_text, key="user_story_text")
     submitted = st.form_submit_button("Run Scenario")
 
-# --- Simulate Portfolio Growth ---
-def simulate_growth(starting, annual_return, bear_loss, duration, bear_year=3):
+# --- Growth Simulation with Income + Bear Market ---
+def simulate_growth(starting, annual_return, bear_loss, income, duration):
     values = [starting]
+    net_worths = [starting]
+    bear_years = []
     for year in range(1, duration + 1):
-        last = values[-1]
-        updated = last * (1 + (bear_loss if year == bear_year else annual_return) / 100)
+        last = values[-1] + (income * 12)
+        if year % 6 == 0:
+            updated = last * (1 + bear_loss / 100)
+            bear_years.append(year)
+        else:
+            updated = last * (1 + annual_return / 100)
         values.append(round(updated, 2))
-    return values
+        net_worths.append(round(updated + (income * 12 * (duration - year)), 2))
+    return values, net_worths, bear_years
 
-# --- On Submit ---
+# --- Submit Logic ---
 if submitted and st.session_state.round <= 3:
     def score_row(row):
         score = 0
@@ -150,33 +157,38 @@ Please give a short, friendly recommendation summarizing which strategy you woul
         st.error("OpenAI Error")
         st.exception(e)
 
-    # Simulate and store graph
-    values = simulate_growth(savings, return_rate, bear_loss, years)
+    # Simulate and store
+    values, net_worths, bear_years = simulate_growth(savings, return_rate, bear_loss, income, years)
     year_range = list(range(0, years + 1))
     st.session_state.financial_graph_data.append({
         "label": f"Scenario {st.session_state.round}",
         "years": year_range,
-        "values": values
+        "portfolio": values,
+        "net_worth": net_worths,
+        "bear_years": bear_years
     })
 
-    # Show GPT result
     st.subheader(f"🤖 Recommendation for Scenario {st.session_state.round}")
     st.markdown(summary)
 
-    # Show Graph
-    st.subheader("📊 Projected Portfolio Value")
+    st.subheader("📊 Portfolio and Net Worth Over Time")
     fig, ax = plt.subplots()
-    ax.plot(year_range, values, marker='o')
+    ax.plot(year_range, values, label="Portfolio Value", marker='o')
+    ax.plot(year_range, net_worths, label="Net Worth", linestyle='--')
+    for y in bear_years:
+        if y < len(values):
+            ax.plot(y, values[y], 'ro')
     ax.set_xlabel("Year")
     ax.set_ylabel("Value ($)")
-    ax.set_title("Growth Over Time")
+    ax.set_title("Simulation with Bear Markets Every 6 Years")
+    ax.legend()
     st.pyplot(fig)
 
     st.session_state.round += 1
 
-# --- Recommendation History ---
+# --- History ---
 if st.session_state.recommendation_history:
-    st.subheader("🧠 Past Recommendations")
+    st.subheader("🧠 Previous Recommendations")
     for i, rec in enumerate(st.session_state.recommendation_history, 1):
         st.markdown(f"### Scenario {i}")
         st.markdown(rec)
@@ -184,17 +196,27 @@ if st.session_state.recommendation_history:
 # --- Combine Graphs ---
 if st.session_state.round > 2 and len(st.session_state.financial_graph_data) > 1:
     if st.button("📈 Combine Graphs"):
-        st.subheader("📉 Combined Financial Simulations")
-        fig, ax = plt.subplots()
+        st.subheader("📉 Combined Portfolio Growth")
+        fig1, ax1 = plt.subplots()
         for entry in st.session_state.financial_graph_data:
-            ax.plot(entry["years"], entry["values"], label=entry["label"])
-        ax.set_title("Scenario Comparison")
-        ax.set_xlabel("Year")
-        ax.set_ylabel("Value ($)")
-        ax.legend()
-        st.pyplot(fig)
+            ax1.plot(entry["years"], entry["portfolio"], label=entry["label"])
+        ax1.set_xlabel("Year")
+        ax1.set_ylabel("Portfolio Value ($)")
+        ax1.set_title("Portfolio Comparison")
+        ax1.legend()
+        st.pyplot(fig1)
 
-# --- Scenario Control ---
+        st.subheader("📊 Combined Net Worth Growth")
+        fig2, ax2 = plt.subplots()
+        for entry in st.session_state.financial_graph_data:
+            ax2.plot(entry["years"], entry["net_worth"], label=entry["label"])
+        ax2.set_xlabel("Year")
+        ax2.set_ylabel("Net Worth ($)")
+        ax2.set_title("Net Worth Comparison")
+        ax2.legend()
+        st.pyplot(fig2)
+
+# --- Controls ---
 col1, col2 = st.columns(2)
 with col1:
     if st.session_state.round <= 3:
@@ -203,4 +225,4 @@ with col2:
     st.button("🔄 Restart", on_click=reset_session)
 
 if st.session_state.round > 3:
-    st.warning("You’ve reached the 3-scenario limit. Click 'Restart' to try a new set.")
+    st.warning("You’ve reached the 3-scenario limit. Click 'Restart' to begin again.")
