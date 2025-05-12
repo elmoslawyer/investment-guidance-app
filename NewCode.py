@@ -24,9 +24,9 @@ def reset_session():
 
 # --- App Title ---
 st.title("📈 AI-Powered Investment Guidance (3 Scenarios Max)")
-st.caption("Simulate growth, net worth, and portfolio value across 3 customizable scenarios.")
+st.caption("Simulate growth, net worth, and portfolio value with GPT-backed advice.")
 
-# --- Microphone JS ---
+# --- Microphone Input JS ---
 components.html("""
 <script>
     const streamlitDoc = window.parent.document;
@@ -76,7 +76,7 @@ def load_data():
 
 data = load_data()
 
-# --- Form ---
+# --- Scenario Form ---
 st.header(f"Scenario {st.session_state.round} of 3")
 with st.form("user_form"):
     goals = st.multiselect("Financial Goals:", ["Homeownership", "Early Retirement", "Education Fund", "Travel", "Wealth Growth"])
@@ -100,7 +100,7 @@ with st.form("user_form"):
     user_story = st.text_area("Optional: More about your situation", placeholder="Example: I just graduated...", value=st.session_state.user_story_text, key="user_story_text")
     submitted = st.form_submit_button("Run Scenario")
 
-# --- Growth Simulation with Income + Bear Market ---
+# --- Simulation Function ---
 def simulate_growth(starting, annual_return, bear_loss, income, duration):
     values = [starting]
     net_worths = [starting]
@@ -116,7 +116,7 @@ def simulate_growth(starting, annual_return, bear_loss, income, duration):
         net_worths.append(round(updated + (income * 12 * (duration - year)), 2))
     return values, net_worths, bear_years
 
-# --- Submit Logic ---
+# --- Scenario Submit Logic ---
 if submitted and st.session_state.round <= 3:
     def score_row(row):
         score = 0
@@ -133,22 +133,30 @@ if submitted and st.session_state.round <= 3:
     context = user_story or "No additional context provided."
     strategies_summary = top_matches[['Strategy_Name', 'Goals', 'Risk_Tolerance', 'Horizon', 'Description']].to_string(index=False)
 
+    # 🔧 Updated system prompt
+    system_prompt = (
+        "You are a helpful, friendly, and realistic investment advisor. "
+        "In addition to summarizing matching strategies, give practical and detailed financial guidance. "
+        "Provide specific suggestions like government bonds for low risk, ETFs or index funds for moderate growth, or high-yield savings for short-term goals. "
+        "If the user's goals include retirement, recommend appropriate retirement accounts like Roth IRAs or 401(k)s. "
+        "Include an example portfolio allocation tailored to their risk tolerance, goals, and knowledge level. "
+        "Do not ask follow-up questions — your response should be complete and self-contained."
+    )
+
     gpt_prompt = f'''
-You are an investment assistant AI.
 The user's profile:
 {user_profile}
 They also shared:
 {context}
 Here are the top 3 matching strategies:
 {strategies_summary}
-Please give a short, friendly recommendation summarizing which strategy you would suggest and why.
 '''
 
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful investment advisor."},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": gpt_prompt}
             ]
         )
