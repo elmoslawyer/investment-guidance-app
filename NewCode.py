@@ -2,27 +2,26 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import openai
+from openai import OpenAI
 import streamlit.components.v1 as components
 
 # --- OpenAI API Key for School Project ---
-openai.api_key = "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"
+client = OpenAI(api_key="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")
 
 # --- Optional Key Test ---
 st.markdown("### 🔐 Test My OpenAI Key")
 if st.button("Run Test"):
     try:
-        test_response = openai.ChatCompletion.create(
+        test_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Say hello in one sentence."}]
         )
         st.success("✅ API key is working!")
-        st.info(f"GPT says: {test_response['choices'][0]['message']['content']}")
+        st.info(f"GPT says: {test_response.choices[0].message.content}")
     except Exception as e:
         st.error("❌ There was a problem using your API key.")
         st.exception(e)
 
-# --- Page Title ---
 st.title("AI-Augmented Investment Guidance for New Graduates")
 st.markdown("""
 This tool helps new graduates receive personalized investment guidance based on your current financial profile.
@@ -35,7 +34,7 @@ components.html("""
         const streamlitDoc = window.parent.document;
 
         function sendTextToStreamlit(text) {
-            const streamlitInput = streamlitDoc.querySelector('input[data-testid="stTextInput"]');
+            const streamlitInput = streamlitDoc.querySelector('input[data-testid=\"stTextInput\"]');
             const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
             nativeInputValueSetter.call(streamlitInput, text);
             streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -98,14 +97,12 @@ with st.form("user_form"):
 
     submitted = st.form_submit_button("Get My Investment Guidance")
 
-# --- Free Text or Spoken Input ---
 st.markdown("## Personal Financial Situation (Optional)")
 user_story = st.text_area(
     "Briefly describe your current financial situation or any plans you'd like considered.",
     placeholder="Example: I just graduated, working part-time, expecting to go full-time soon..."
 )
 
-# --- Load Data and Match Recommendations ---
 @st.cache_data
 def load_data():
     return pd.read_csv("673_Final_Dataset.csv")
@@ -141,7 +138,6 @@ if submitted:
             st.markdown(f"**Description:** {row['Description']}")
             st.markdown("---")
 
-        # --- GPT Summary ---
         strategies_summary = top_matches[['Strategy_Name', 'Goals', 'Risk_Tolerance', 'Horizon', 'Description']].to_string(index=False)
         user_profile = f"Goals: {', '.join(goals)} | Horizon: {horizon} | Risk Tolerance: {risk} | Knowledge: {knowledge}"
         context = user_story if user_story else user_speech_input or "No additional context provided."
@@ -162,14 +158,14 @@ Please give a short, friendly recommendation summarizing which strategy you woul
 """
 
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful and friendly investment advisor for young professionals."},
                     {"role": "user", "content": gpt_prompt}
                 ]
             )
-            summary = response['choices'][0]['message']['content']
+            summary = response.choices[0].message.content
             st.subheader("AI-Powered Recommendation Summary")
             st.markdown(f"> {summary}")
             speak_browser(summary)
