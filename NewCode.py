@@ -28,17 +28,19 @@ st.markdown("""
 This tool helps new graduates receive personalized investment guidance based on your current financial profile.
 """)
 
-# --- Microphone Input with Continuous Listening and Status ---
+# --- Microphone Input with Append Behavior + Mic Status ---
 st.subheader("🎤 Speak your financial situation")
 
 components.html("""
     <script>
         const streamlitDoc = window.parent.document;
 
-        function sendTextToStreamlit(text) {
+        function appendTextToStreamlit(text) {
             const inputBox = streamlitDoc.querySelector('textarea[placeholder^="Example: I just graduated"]');
             if (inputBox) {
-                inputBox.value = text;
+                const currentText = inputBox.value;
+                const newText = currentText.trim() + (currentText ? " " : "") + text;
+                inputBox.value = newText;
                 inputBox.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
@@ -46,12 +48,12 @@ components.html("""
         var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'en-US';
         recognition.interimResults = false;
-        recognition.continuous = true;  // ✅ Stay on after each result
+        recognition.continuous = true;
         recognition.maxAlternatives = 1;
 
         recognition.onresult = function(event) {
             var transcript = event.results[event.results.length - 1][0].transcript;
-            sendTextToStreamlit(transcript);
+            appendTextToStreamlit(transcript);
         };
 
         recognition.onerror = function(event) {
