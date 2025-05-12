@@ -28,7 +28,11 @@ st.markdown("""
 This tool helps new graduates receive personalized investment guidance based on your current financial profile.
 """)
 
-# --- Microphone Input with Append Behavior + Mic Status ---
+# --- Session state for persistent user story ---
+if "user_story_text" not in st.session_state:
+    st.session_state["user_story_text"] = ""
+
+# --- Microphone Input with Persistent Append ---
 st.subheader("🎤 Speak your financial situation")
 
 components.html("""
@@ -107,7 +111,9 @@ with st.form("user_form"):
 st.markdown("## Optional: Add More Context")
 user_story = st.text_area(
     "Briefly describe your current financial situation or any plans you'd like considered.",
-    placeholder="Example: I just graduated, working part-time, expecting to go full-time soon..."
+    value=st.session_state["user_story_text"],
+    placeholder="Example: I just graduated, working part-time, expecting to go full-time soon...",
+    key="user_story_text"
 )
 
 # --- Load Strategy Data ---
@@ -143,7 +149,7 @@ if submitted:
 
         strategies_summary = top_matches[['Strategy_Name', 'Goals', 'Risk_Tolerance', 'Horizon', 'Description']].to_string(index=False)
         user_profile = f"Goals: {', '.join(goals)} | Horizon: {horizon} | Risk Tolerance: {risk} | Knowledge: {knowledge}"
-        context = user_story or "No additional context provided."
+        context = st.session_state["user_story_text"] or "No additional context provided."
 
         gpt_prompt = f"""
 You are an investment assistant AI.
